@@ -1,0 +1,5 @@
+---
+# file: roles/ansible-pbis/handlers/main.yml
+- name: update dns
+  command: /etc/cron.daily/dns
+  when: "'10.240.97' not in ansible_all_ipv4_addresses[0]"

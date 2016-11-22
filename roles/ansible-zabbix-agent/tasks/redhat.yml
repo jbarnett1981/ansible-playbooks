@@ -1,0 +1,15 @@
+---
+# tasks file for zabbix on RedHat
+
+- name: Redhat | install zabbix repo
+  template: src=zabbix.repo.j2
+            dest=/etc/yum.repos.d/zabbix.repo
+            owner=root
+            group=root
+            mode=0644
+
+- name: Redhat | refresh yum cache
+  command: yum --disablerepo=* --enablerepo=zabbix clean all
+
+- name: Redhat | install latest version of zabbix
+  yum: name=zabbix-agent state=latest

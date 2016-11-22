@@ -1,0 +1,66 @@
+---
+# ansible-sssd role
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+- include: ubuntu.yml
+  when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14
+
+- set_fact: domain_user={{ 'svc_domainjoin_devit' }}
+  when: domain == 'tsi.lan'
+
+- set_fact: domain_user={{ 'svc_domainjoin' }}
+  when: domain != 'tsi.lan'
+
+- script: adsite.sh
+  register: custom_adsite
+
+- name: Redhat | copy /etc/samba/smb.conf file
+  template: src=smb.conf.j2 dest=/etc/samba/smb.conf
+
+- name: Redhat | copy /etc/sssd/sssd.conf file
+  template: src=sssd.conf.j2 dest=/etc/sssd/sssd.conf group=root owner=root mode=0600
+
+- name: Redhat | copy /etc/krb5.conf file
+  template: src=krb5.conf.j2 dest=/etc/krb5.conf
+
+- name: enable params in sshd_config
+  replace: dest=/etc/ssh/sshd_config regexp='.*({{item}}).*$' replace="{{item}} yes"
+  with_items:
+     - KerberosAuthentication
+     - KerberosOrLocalPasswd
+     - KerberosTicketCleanup
+     - GSSAPIAuthentication
+     - GSSAPICleanupCredentials
+     - GSSAPIEnablek5users
+     - ChallengeResponseAuthentication
+     - PasswordAuthentication
+
+- name: disable params in sshd_config
+  replace: dest=/etc/ssh/sshd_config regexp='.*({{item}}).*$' replace="{{item}} no"
+  with_items:
+     - GSSAPIStrictAcceptorCheck
+     - UseDNS
+
+- name: update hosts file
+  replace: dest=/etc/hosts regexp='^127.0.0.1.*' replace="127.0.0.1   {{ansible_fqdn}} {{ansible_hostname}} localhost localhost.localdomain localhost4 localhost4.localdomain4"
+
+- name: update hosts file
+  replace: dest=/etc/hosts regexp='^::1.*' replace="::1   {{ansible_fqdn}} {{ansible_hostname}} localhost localhost.localdomain localhost4 localhost4.localdomain4"
+
+- name: download keytab
+  get_url: url=http://puppetshare.dev.tsi.lan/scripts/krb5.keytab.svc_domainjoin_devit dest=/etc/krb5.keytab.svc_domainjoin_devit
+
+- name: initialize kerb ticket
+  shell: kinit svc_domainjoin_devit -k -t /etc/krb5.keytab.svc_domainjoin_devit
+
+- name: join host to domain
+  shell: net ads -k join createcomputer="TSI_DevIT/Build"
+
+- name: start and enable services
+  service: name={{item}} state=started enabled=yes
+  with_items:
+     - sssd
+     - sshd
+     - oddjobd

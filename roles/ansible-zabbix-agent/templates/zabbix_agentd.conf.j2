@@ -1,0 +1,13 @@
+Server=10.26.128.60
+Hostname={{ ansible_hostname }}
+ServerActive=10.26.128.60
+EnableRemoteCommands=1
+{% if ansible_os_family == "RedHat" or ansible_os_family == "CentOS" or ansible_os_family == "Ubuntu" %}
+LogFile=/var/log/zabbix/zabbix_agentd.log
+LogType=file
+LogFileSize=0
+PidFile=/var/run/zabbix/zabbix_agentd.pid
+Include=/etc/zabbix/zabbix_agentd.d/
+# discovers disks via /proc/diskstats
+UserParameter=custom.vfs.dev.discovery,/usr/local/devit/zabbix/lld-disks.py
+{% endif %}

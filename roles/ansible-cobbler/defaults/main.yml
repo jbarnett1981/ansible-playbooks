@@ -1,0 +1,200 @@
+---
+# settings
+# WARNING: The default password is "changeme" fine for demo purposes
+# but should be set to something more secure.
+folders:
+    - kickstarts
+    - scripts
+    - snippets
+
+cobbler_default_password_crypted: $1$0j9R7J3U$qhH8N9oXlytT.pEjjSud60
+bound_interface: eth0
+
+cobbler_get_loaders: true
+cobbler_signature_update: true
+
+# dhcpd
+cobbler_dhcp_listen_interfaces: eth0
+
+# dhcp.template
+# subnets:
+#   - {
+#       cobbler_dhcp_subnet: 10.0.2.0,
+#       cobbler_dhcp_netmask: 255.255.255.0,
+#       cobbler_dhcp_option_routers: 10.0.2.2,
+#       cobbler_dhcp_option_domain_name_servers: 10.0.2.2,
+#       cobbler_dhcp_option_subnet_mask: 255.255.255.0,
+#       cobbler_dhcp_dynamic_bootp_start: 10.0.2.100,
+#       cobbler_dhcp_dynamic_bootp_end: 10.0.2.254,
+#     }
+
+# ubuntu preseed
+#ubuntu_mirror: us.archive.ubuntu.com
+
+# cobbler distros iso
+distros:
+  - {
+      name: CentOS72-1511,
+      arch: x86_64,
+      url: 'http://dvfilesrv01web/iso/Linux/CentOS/CentOS-7-x86_64-Minimal-1511.iso',
+      file: /repo/iso/CentOS-7-x86_64-Minimal-1511.iso,
+      path: /repo/iso/CentOS-7-x86_64-Minimal-1511/,
+    }
+  - {
+      name: CentOS70-x86_64,
+      arch: x86_64,
+      url: 'http://dvfilesrv01web/iso/Linux/CentOS/CentOS-7.0-1406-x86_64-Minimal.iso',
+      file: /repo/iso/CentOS-7.0-1406-x86_64-Minimal.iso,
+      path: /repo/iso/CentOS-7.0-1406-x86_64-Minimal/,
+    }
+  - {
+      name: RHEL66-x86_64,
+      arch: x86_64,
+      url: 'http://dvfilesrv01web/iso/Linux/Redhat/rhel-server-6.6-x86_64-dvd.iso',
+      file: /repo/iso/rhel-server-6.6-x86_64-dvd.iso,
+      path: /repo/iso/rhel-server-6.6-x86_64-dvd/,
+    }
+  - {
+      name: RHEL71-x86_64,
+      arch: x86_64,
+      url: 'http://dvfilesrv01web/iso/Linux/Redhat/rhel-server-7.1-x86_64-dvd.iso',
+      file: /repo/iso/rhel-server-7.1-x86_64-dvd.iso,
+      path: /repo/iso/rhel-server-7.1-x86_64-dvd/,
+    }
+  - {
+      name: ubuntu-server-1404-x86_64,
+      arch: x86_64,
+      url: 'http://dvfilesrv01web/iso/Linux/Ubuntu/ubuntu-14.04.1-server-amd64.iso',
+      file: /repo/iso/ubuntu-14.04.1-server-amd64.iso,
+      path: /repo/iso/ubuntu-14.04.1-server-amd64/,
+    }
+
+# cobbler distro imports
+# Uncomment (and change) the following lines if you wish to import a distro.
+# distro_imports:
+#   - {
+#       name: centos-6.6,
+#       arch: x86_64,
+#       url: 'rsync://mirrors.nl.kernel.org::centos/6.6/os/x86_64/'',
+#     }
+#   - {
+#       name: centos-7.0.1406,
+#       arch: x86_64,
+#       url: 'rsync://mirrors.nl.kernel.org::centos/6.6/os/x86_64/',
+#     }
+
+# cobbler repos
+# Uncomment (and change) the following lines if you wish to add a repo.
+# repos:
+#   - {
+#       name: centos-updates-6.6-x86_64,
+#       arch: x86_64,
+#       mirror: 'http://mirrors.nl.kernel.org/centos/6.6/updates/x86_64/',
+#       mirror_locally: Y,
+#     }
+#   - {
+#       name: epel-6-x86_64,
+#       arch: x86_64,
+#       mirror: 'http://mirrors.nl.kernel.org/fedora-epel/6/x86_64/',
+#       mirror_locally: Y,
+#     }
+
+# cobbler profiles
+# Uncomment (and change) the following lines if you wish to add a profile.
+profiles:
+  - {
+      name: CentOS_71_LVM,
+      distro: CentOS70-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/centos70_lvm.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: CentOS_71_LVM_Ansible,
+      distro: CentOS70-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/centos70_lvm_ansible.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: CentOS_71_2_Disk_LVM_DBZ_EXT4,
+      distro: CentOS70-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/centos70_2_disks_dbz_ext4.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: CentOS_71_6_Disk_LVM_EXT4_CLOUDERA,
+      distro: CentOS70-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/centos70_6_disks_ext4_cloudera.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: RHEL_66_LVM,
+      distro: RHEL66-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/rhel66_lvm.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: RHEL_71_LVM,
+      distro: RHEL71-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/rhel70_lvm.ks,
+      ksmeta: '',
+      kopts: 'selinux=0',
+      repos: '',
+    }
+  - {
+      name: ubuntu-server-1404-devit-1-disk,
+      distro: ubuntu-server-1404-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/ubuntu1404.devit.seed,
+      ksmeta: '',
+      kopts: '',
+      repos: '',
+    }
+  - {
+      name: ubuntu-server-1404-devit-2-disk,
+      distro: ubuntu-server-1404-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/ubuntu1404.devit_2_disk.seed,
+      ksmeta: '',
+      kopts: '',
+      repos: '',
+    }
+  - {
+      name: ubuntu-server-1404-devit-1-disk_Ansible,
+      distro: ubuntu-server-1404-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/ubuntu1404.devit_ansible.seed,
+      ksmeta: '',
+      kopts: '',
+      repos: '',
+    }
+  - {
+      name: ubuntu-server-1404-devit-2-disk_Ansible,
+      distro: ubuntu-server-1404-x86_64,
+      kickstart: /var/lib/cobbler/kickstarts/ubuntu1404.devit_2_disk_ansible.seed,
+      ksmeta: '',
+      kopts: '',
+      repos: '',
+    }
+
+# cobbler systems
+# systems:
+#    - {
+#        name: cobbler-node1,
+#        hostname: cobbler-node1.local,
+#        profile: ubuntu-14.04-mini-x86_64,
+#        interface: eth0,
+#        ip: 10.0.2.100,
+#        netmask: 255.255.255.0,
+#        gateway: 10.0.2.2,
+#        mac: '00:50:56:25:2B:19',
+#        netboot: 'false'
+# #      dhcptag: 192.168.10.0,
+# #      next_server: 192.168.10.11
+#      }

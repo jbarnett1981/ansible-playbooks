@@ -1,0 +1,28 @@
+---
+# ansible-puppet role
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+- include: ubuntu.yml
+  when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14
+
+- name: download puppet.conf file from puppetshare
+  get_url: url={{ puppet_conf }} dest=/etc/puppet/puppet.conf mode=0644 force=yes
+
+- name: puppet run to create cert
+  puppet:
+
+#pause 10 seconds while foreman recognizes puppet cert
+- pause: seconds=10
+
+- name: add to foreman hostgroup
+  script: foreman.py --username {{ foreman_user }} --password {{ foreman_pass }} --apiurl {{ foreman_api }} add --hostname {{ ansible_fqdn }} --hostgroup "{{ foreman_hostgroup|join("") }}"
+  tags:
+    - foreman
+
+- name: enable and stop puppet service
+  service: name=puppet state=stopped enabled=yes
+
+- name: start puppet service
+  service: name=puppet state=started

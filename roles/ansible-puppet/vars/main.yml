@@ -1,0 +1,3 @@
+---
+# puppet.conf vars
+puppet_conf: http://puppetshare.dev.tsi.lan/puppet/Linux/PuppetNG/puppet.conf

@@ -1,0 +1,7 @@
+---
+# tasks file for network restart on Redhat
+- name: RedHat | restart network on {{ansible_default_ipv4.interface}}
+  service: name=network state=restarted
+  register: networkrestart
+  tags:
+    - configure_vlan

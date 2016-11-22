@@ -1,0 +1,4 @@
+#!/bin/bash
+int=$(ip route ls | grep default | awk '{print $5}')
+ip=$(ip addr show dev $int | grep inet | head -n1 | awk '{print $2}' | rev | cut -c 4- | rev)
+/opt/pbis/bin/update-dns --ipaddress $ip

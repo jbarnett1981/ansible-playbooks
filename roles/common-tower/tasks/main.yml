@@ -1,0 +1,102 @@
+---
+# common role
+
+- name: remove ansible-setup.sh from /etc/cron.d/
+  file: path={{ item }} state=absent
+  with_items:
+    - "/etc/cron.d/ansible-setup"
+    - "/tmp/ansible-setup.sh"
+  tags:
+    - cleanup
+
+- name: delete kickstart files in /root
+  shell: rm -f /root/anaconda-ks.cfg && rm -f /root/ansible-first-boot.log warn=no
+  tags:
+    - cleanup
+
+- name: delete /tmp files
+  shell: rm -rf /tmp/* warn=no
+  tags:
+    - cleanup
+
+- name: create gitkey with correct awx perms
+  local_action: copy src=roles/common-tower/files/gitkey dest=gitkey mode=0600 owner=awx group=awx
+
+- name: clone zabbix repo to zabbix/
+  local_action: git repo=git@gitlab.tableausoftware.com:devit/zabbixapi.git dest=zabbix/ accept_hostkey=yes recursive=yes key_file=gitkey
+  tags:
+     - zabbix_add
+
+- name: create host in zabbix
+  local_action: command python zabbix/zconn.py --username {{ zabbix_user }} --password {{ zabbix_pass }} --apiurl {{ zabbix_api }} add --hostname {{ ansible_fqdn }} --hostgroup "{{ zabbix_hostgroup|join('') }}" --templates "{{ zabbix_templates|join(',') }}" {% if ansible_system_vendor != "Dell Inc." %}--no_snmp {% endif %}
+  environment:
+        REQUESTS_CA_BUNDLE: zabbix/certs/dvcertauth.pem
+  tags:
+    - zabbix_add
+
+- name: clone foreman repo to foreman/
+  local_action: git repo=git@gitlab.tableausoftware.com:devit/foreman_api.git dest=foreman/ accept_hostkey=yes recursive=yes key_file=gitkey
+  tags:
+     - foreman_add
+
+- name: add to foreman hostgroup
+  local_action: command python foreman/foreman.py --username {{ foreman_user }} --password {{ foreman_pass }} --apiurl {{ foreman_api }} add --hostname {{ ansible_fqdn }} --hostgroup "{{ foreman_hostgroup|join("") }}"
+  environment:
+        REQUESTS_CA_BUNDLE: foreman/certs/dvcertauth.pem
+  tags:
+    - foreman_add
+
+- name: puppet run
+  puppet:
+
+- name: enable and restart puppet service
+  service: name=puppet state=restarted enabled=yes
+
+- name: update dns after 3 minutes (after network port has been changed)
+  at: command="/opt/pbis/bin/update-dns" count=3 units="minutes"
+
+- name: clone cisco repo to cisco/
+  local_action: git repo=git@gitlab.tableausoftware.com:devit/Cisco.git dest=cisco/ accept_hostkey=yes recursive=yes key_file=gitkey
+  tags:
+     - switch_config
+
+- name: configure prod vlan (from ansible host machine)
+  local_action: command python cisco/switch_config.py --username {{ switch_user }} --password {{ switch_pass }} --switch {{ switchname }} --interface {{ switchinterface }} configure --vlan {{ vlan }} --name {{ ansible_hostname }}
+  async: 0
+  poll: 0
+  tags:
+     - switch_config
+
+- name: get ip on prod vlan
+  local_action: shell dig @10.26.160.31 {{ ansible_hostname }}.{{ domain }} +short
+  register: prodip
+  until: prodip.stdout != ''
+  retries: 30
+  delay: 30
+  tags:
+     - switch_config
+
+- debug: msg="the host ip is {{ prodip.stdout }}"
+
+- name: wait for ssh to become available
+  wait_for: port=22 host="{{ prodip.stdout }}" timeout=300 delay=10 connect_timeout=3
+  connection: local
+  tags:
+     - switch_config
+
+- name: clone cobbler_api repo to cobbler/
+  local_action: git repo=git@gitlab.tableausoftware.com:devit/cobbler_api.git dest=cobbler/ accept_hostkey=yes recursive=yes key_file=gitkey
+  tags:
+     - cobbler_remove
+
+- name: remove system from cobbler
+  local_action: command python cobbler/cobbler_add_remove_system.py --user {{ cobbler_user }} --password {{ cobbler_pass }} --apiurl {{ cobbler_api }} remove -s -n {{ ansible_hostname }}
+  tags:
+    - cobbler_remove
+
+- name: restart host
+  delegate_to: "{{ prodip.stdout }}"
+  shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+  async: 1
+  poll: 0
+  ignore_errors: true

@@ -1,0 +1,4 @@
+---
+# pbis vars
+pbis_repo_url: http://repo.pbis.beyondtrust.com/yum/pbiso/$basearch
+pbis_repo_gpg_key_url: http://repo.pbis.beyondtrust.com/yum/RPM-GPG-KEY-pbis

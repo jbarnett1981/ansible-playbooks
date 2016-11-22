@@ -1,0 +1,22 @@
+---
+# common-cleanup role for centos/redhat >= 7
+
+- name: remove ansible-setup.sh from /etc/rc.local
+  lineinfile: dest=/etc/rc.local regexp='^if [ -f /tmp/ansible-setup.sh ]' state=absent
+  tags:
+    - rclocal
+
+- name: remove system from cobbler
+  script: cobbler_add_remove_system.py --user {{ cobbler_user }} --password {{ cobbler_pass }} --apiurl {{ cobbler_api }} remove -s -n {{ ansible_hostname }}
+  tags:
+    - cobbler_remove
+
+- name: delete kickstart files in /root
+  shell: rm -f /root/anaconda-ks.cfg && rm -f /root/ansible-first-boot.log warn=no
+  tags:
+    - rootclean
+
+- name: delete /tmp files
+  shell: rm -rf /tmp/* warn=no
+  tags:
+    - tmpclean

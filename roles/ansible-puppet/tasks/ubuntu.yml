@@ -1,0 +1,19 @@
+---
+# tasks file for pbis on Ubuntu
+
+- name: Ubuntu | add Puppetlabs apt repo
+  apt_repository: repo='deb https://apt.puppetlabs.com {{ ansible_distribution_release }} main' state=present
+
+- name: Ubuntu | apt-get update
+  apt: update_cache=yes cache_valid_time=3600
+
+- name: install latest version of puppet
+  apt: name=puppet state=latest force=yes
+
+- name: start puppet in /etc/default/puppet
+  replace: dest=/etc/default/puppet regexp='(START=no)' replace='START=yes'
+  when: ansible_distribution_major_version == '14'
+
+- name: enable puppet on Ubuntu 16.04
+  command: /usr/bin/puppet agent --enable
+  when: ansible_distribution_major_version == '16'

@@ -1,0 +1,18 @@
+---
+# Runs on local machine via ansible-pull
+
+- hosts: all
+  connection: local
+  remote_user: root
+  vars:
+    author: jbarnett@tableau.com
+
+  environment:
+    REQUESTS_CA_BUNDLE: /tmp/dvcertauth.pem
+
+  roles:
+    - { role: common-local, tags: 'common-local' }
+    - { role: ansible-sssd, tags: 'sssd' }
+    - { role: ansible-puppet, tags: 'puppet' }
+    - { role: ansible-drac, when: "'PowerEdge' in ansible_product_name", tags: 'drac' }
+    - { role: common-cleanup, tags: 'cleanup' }

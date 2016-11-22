@@ -1,0 +1,16 @@
+---
+# ansible-drac role
+
+- name: copy drac key and cert to /tmp
+  copy: src=roles/ansible-drac/files/ dest=/tmp/ mode=0644
+
+- name: copy config template to /tmp
+  template: src=config.cfg.j2 dest=/tmp/config.cfg
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+# Not supported yet
+# - include: ubuntu.yml
+#   when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14
+

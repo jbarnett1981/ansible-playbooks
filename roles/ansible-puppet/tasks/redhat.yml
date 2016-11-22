@@ -1,0 +1,11 @@
+---
+# tasks file for pbis on RedHat
+
+- name: Redhat | install puppet repo
+  yum: name=http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm state=present
+
+- name: Redhat | refresh yum cache
+  command: yum --disablerepo=* --enablerepo=puppetlabs* clean all
+
+- name: install latest version of puppet
+  yum: name=puppet state=latest

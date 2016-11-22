@@ -1,0 +1,31 @@
+---
+# common-local role
+
+- name: copy dvcertauth.pem to /tmp so various scripts can use it to establish secure session
+  copy: src=roles/common-local/files/dvcertauth.pem dest=/tmp/dvcertauth.pem mode=0644
+
+- name: create host in zabbix
+  script: zconn.py --username {{ zabbix_user }} --password {{ zabbix_pass }} --apiurl {{ zabbix_api }} add --hostname {{ ansible_nodename }} --hostgroup "{{ zabbix_hostgroup|join('') }}" --templates "{{ zabbix_templates|join(',') }}" {% if ansible_system_vendor != "Dell Inc." %}--no_snmp {% endif %}
+  tags:
+    - zabbix_add
+
+- name: configure prod vlan
+  script: switch_config.py --username {{ switch_user }} --password {{ switch_pass }} --switch {{ switchname }} --interface {{ switchinterface }} configure --vlan {{ vlan }} --name {{ ansible_hostname }}
+  tags:
+    - configure_vlan
+
+#pause 10 seconds while port is reconfigured before restarting network
+- pause: seconds=10
+  tags:
+    - configure_vlan
+
+- name: configure SSH console redirection in BIOS
+  shell: /opt/dell/toolkit/bin/syscfg --fsbr=57600 && /opt/dell/toolkit/bin/syscfg --serialcomm=onconredircom2 && /opt/dell/toolkit/bin/syscfg --serialportaddrsel=serial1com1serial2com2 && /opt/dell/toolkit/bin/syscfg --conterm=ansi warn=no
+  tags:
+    - serialconfig
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+- include: ubuntu.yml
+  when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14

@@ -1,0 +1,6 @@
+domain_fqdn: dev.tsi.lan
+webhook_log_folder: cobbler
+zabbix_hostgroup:
+   - "DevIT Linux Servers"
+zabbix_templates:
+   - "Template DevIT OS Linux"

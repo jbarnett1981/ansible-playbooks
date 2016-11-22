@@ -1,0 +1,7 @@
+---
+# tasks file for network restart on Redhat
+- name: Ubuntu | restart network on {{ansible_default_ipv4.interface}}
+  command: bash -c "ifdown {{ansible_default_ipv4.interface}};ifup {{ansible_default_ipv4.interface}}"
+  register: networkrestart
+  tags:
+    - configure_vlan

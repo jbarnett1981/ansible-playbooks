@@ -1,0 +1,5 @@
+---
+# common-cleanup role
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7

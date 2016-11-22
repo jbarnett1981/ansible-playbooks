@@ -1,0 +1,41 @@
+---
+# ansible-pbis role
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+- include: ubuntu.yml
+  when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14
+
+- set_fact: domain_user={{ 'svc_domainjoin_devit' }}
+  when: domain == 'tsi.lan'
+
+- set_fact: domain_user={{ 'svc_domainjoin' }}
+  when: domain != 'tsi.lan'
+
+- name: Copy DNS cron script to /etc/cron.daily/
+  copy: src=dns dest=/etc/cron.daily/dns owner=root group=root mode=0750
+
+- name: check to see if already joined to domain
+  shell: /opt/pbis/bin/domainjoin-cli query | grep -i domain | awk '{print tolower($3)}'
+  register: domainstatus
+
+- name: Configure domain via pbis on all hosts
+  shell: /opt/pbis/bin/domainjoin-cli join --assumeDefaultDomain yes --userDomainPrefix tsi {{ domain }} {{ domain_user }} {{ domain_pass }}
+  when: domainstatus.stdout == ''
+  register: domainjoined
+
+- name: Configure bash as default login shell
+  shell: /opt/pbis/bin/config LoginShellTemplate /bin/bash
+  when: domainjoined.changed
+  register: command_result
+  failed_when: "'FAILED' in command_result.stderr"
+  notify:
+    - update dns
+
+# - name: remove FQDN from /etc/hosts
+#   replace: dest=/etc/hosts regexp='({{ ansible_fqdn }} )({{ ansible_hostname }} )' replace=''
+
+- name: Update facts (to get hostname after domain join)
+  setup:
+  when: domainjoined.changed

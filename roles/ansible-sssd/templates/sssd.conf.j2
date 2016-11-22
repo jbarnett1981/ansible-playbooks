@@ -1,0 +1,28 @@
+[sssd]
+domains = tsi.lan
+config_file_version = 2
+services = nss, pam
+
+[domain/tsi.lan]
+ad_domain = tsi.lan
+krb5_realm = TSI.LAN
+cache_credentials = True
+id_provider = ad
+subdomain_inherit = ignore_group_members, ldap_purge_cache_timeout
+ignore_group_members = True
+ldap_purge_cache_timeout = 0
+krb5_store_password_if_offline = True
+default_shell = /bin/bash
+ldap_id_mapping = True
+use_fully_qualified_names = False
+fallback_homedir = /home/tsi/%u
+auth_provider = ad
+access_provider = ad
+ad_site = {{ custom_adsite.stdout }}
+#ad_access_filter = FOREST:TSI.LAN:(memberOf=cn=DevIT Infrastructure,ou=DevIT_delegated,ou=User Groups,ou=High Sec Groups,ou=TSI Groups,dc=tsi,dc=lan)
+ad_gpo_access_control = permissive
+ad_gpo_map_remote_interactive = +sshd
+dyndns_update = True
+dyndns_iface = {{ansible_default_ipv4.interface}}
+dyndns_refresh_interval = 86400
+dyndns_update_ptr = True

@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+[pbis]
+name=PBISO- local packages for $basearch
+baseurl={{ pbis_repo_url }}
+enabled=1
+gpgkey={{ pbis_repo_gpg_key_url }}
+gpgcheck=1

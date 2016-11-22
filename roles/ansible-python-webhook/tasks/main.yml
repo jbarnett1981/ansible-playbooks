@@ -1,0 +1,47 @@
+---
+# ansible-python-webhook role
+
+- name: clone webhook repo to /tmp
+  git: repo=https://devit-admin:1xKAWF6mm6@gitlab.tableausoftware.com/devit/gitlab-webhook-receiver.git dest=/tmp/webhook/ accept_hostkey=yes
+  tags:
+     - git_clone
+
+- name: create devit dir if it doesn't exist
+  file: path=/usr/local/devit state=directory
+
+- name: copy gitlab-webhook-receiver.py to devit folder
+  copy: src=/tmp/webhook/gitlab-webhook-receiver.py dest=/usr/local/devit/gitlab-webhook-receiver.py mode=0755
+
+- name: copy init script
+  copy: src=/tmp/webhook/gitlab-webhook-receiver-{{ ansible_os_family | lower }} dest=/etc/init.d/gitlab-webhook-receiver mode=0755
+
+- name: ensure (empty) log file exists
+  file: path=/var/log/{{ webhook_log_folder }}/gitlab-webhook.log state=touch
+
+- name: create /repo/dummy dir if it doesn't exist
+  file: path=/repo/dummy state=directory
+
+- name: update log_file in gitlab-webhook-receiver
+  replace: dest=/usr/local/devit/gitlab-webhook-receiver.py regexp='^(log_file).*$' replace="log_file = '/var/log/{{ webhook_log_folder }}/gitlab-webhook.log'"
+
+- name: update git_dir in gitlab-webhook-receiver
+  replace: dest=/usr/local/devit/gitlab-webhook-receiver.py regexp='^(git_dir).*$' replace="git_dir = '/repo/dummy'"
+
+- name: update git_master_dir in gitlab-webhook-receiver
+  replace: dest=/usr/local/devit/gitlab-webhook-receiver.py regexp='^(git_master_dir).*$' replace="git_master_dir = '/repo/data'"
+
+- name: update git_project in gitlab-webhook-receiver
+  replace: dest=/usr/local/devit/gitlab-webhook-receiver.py regexp='^(git_project).*$' replace="git_project = 'cobbler'"
+
+- name: add init script to startup
+  shell: chkconfig --add gitlab-webhook-receiver
+
+- name: enable and start gitlab-webhook-receiver service
+  service: name=gitlab-webhook-receiver enabled=yes state=started
+
+
+# - include: redhat.yml
+#   when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+# - include: ubuntu.yml
+#   when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14

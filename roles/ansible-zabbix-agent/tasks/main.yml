@@ -1,0 +1,41 @@
+---
+# ansible-zabbix role
+
+- include: redhat.yml
+  when: ansible_os_family == 'RedHat' and ansible_lsb.major_release|int >= 7
+
+- include: ubuntu.yml
+  when: ansible_lsb.id == 'Ubuntu' and ansible_lsb.major_release|int >= 14
+
+- name: Create include dir /etc/zabbix/zabbix_agent.d
+  file: path=/etc/zabbix/zabbix_agentd.d
+        owner=root
+        group=root
+        state=directory
+
+- name: Create include dir /usr/local/devit/zabbix
+  file: path=/usr/local/devit/zabbix
+        owner=root
+        group=root
+        state=directory
+
+- name: Copy userparameter_linux_disks config to system
+  template: src=userparameter_linux_disks.conf.j2
+            dest=/etc/zabbix/zabbix_agentd.d/userparameter_linux_disks.conf
+            owner=root
+            group=root
+            mode=0644
+
+- name: copy lld-disks.py to system
+  copy: src=lld-disks.py dest=/usr/local/devit/zabbix/lld-disks.py mode=0755
+
+- name: Configure zabbix-agent
+  template: src=zabbix_agentd.conf.j2
+            dest=/etc/zabbix/zabbix_agentd.conf
+            owner=root
+            group=root
+            mode=0644
+  notify:
+    - restart zabbix-agent
+
+- include: roles/common/tasks/zabbix-api-add.yml

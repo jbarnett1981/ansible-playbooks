@@ -1,0 +1,22 @@
+---
+# tasks file for drac on Redhat
+
+- name: RedHat | install srvadmin-idracadm7
+  yum: name=srvadmin-idracadm7 state=latest
+
+- name: RedHat | import drac config
+  shell: /opt/dell/srvadmin/sbin/racadm set -f /tmp/config.cfg
+  register: dracconfig
+  until: dracconfig.rc == 0
+  retries: 5
+  delay: 10
+
+- name: RedHat | Configure DRAC SSL Key
+  shell: /opt/dell/srvadmin/sbin/racadm sslkeyupload -f /tmp/drac.key -t 1
+
+- name: RedHat | Configure DRAC SSL Cert
+  shell: /opt/dell/srvadmin/sbin/racadm sslcertupload -f /tmp/drac.pem -t 1
+  notify:
+    - restart drac
+
+- meta: flush_handlers

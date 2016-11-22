@@ -1,0 +1,19 @@
+---
+# tasks file for sssd on Redhat
+
+- name: install sssd and required packages
+  yum: name={{item}} state=installed
+  with_items:
+     - realmd
+     - sssd
+     - oddjob
+     - oddjob-mkhomedir
+     - adcli
+     - samba-common
+     - ntpdate
+     - ntp
+     - krb5-workstation
+     - sssd-tools
+
+- name: run authconfig command
+  command: /usr/sbin/authconfig --enablesssd --enablesssdauth --enablemkhomedir --update
