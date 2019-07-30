@@ -1,0 +1,62 @@
+# This file must come before the 99 file
+#ANSIBLE
+$InputFileName /var/log/ansible.log
+$InputFileTag ansible:
+$InputFileStateFile ansible.state
+$InputFileSeverity info
+$InputFileFacility local3
+$InputRunFileMonitor
+
+# AUDITD
+$InputFileName /var/log/audit/audit.log
+$InputFileTag auditd:
+$InputFileSeverity info
+$InputFileFacility local3
+$InputRunFileMonitor
+
+# CLAMAV - Ubuntu
+$InputFileName /var/log/clamav/freshclam.log
+$InputFileTag clamav:
+$InputFileSeverity info
+$InputFileFacility local3
+$InputRunFileMonitor
+
+# LYNIS
+#$InputFileName /var/log/lynis.log
+#$InputFileTag lynis:
+#$InputFileSeverity info
+#$InputFileFacility local3
+#$InputRunFileMonitor
+
+# RKHUNTER
+$InputFileName /var/log/rkhunter/rkhunter.log
+$InputFileTag rkhunter:
+$InputFileSeverity info
+$InputFileFacility local3
+$InputRunFileMonitor
+
+# YUM
+$InputFileName /var/log/yum.log
+$InputFileTag yum:
+$InputFileSeverity info
+$InputFileFacility local3
+$InputRunFileMonitor
+
+if $syslogtag == 'ansible:' then @svc-syslog.cls.eng.netapp.com:5164
+& stop
+
+if $syslogtag == 'auditd:' then @svc-syslog.cls.eng.netapp.com:5300
+& stop
+
+if $syslogtag == 'rkhunter:' then @svc-syslog.cls.eng.netapp.com:5302
+& stop
+
+if $syslogtag == 'clamav:' then @svc-syslog.cls.eng.netapp.com:5304
+& stop
+
+#if $syslogtag == 'lynis:' then @svc-syslog.cls.eng.netapp.com:5305
+#& stop
+
+if $syslogtag == 'yum:' then @svc-syslog.cls.eng.netapp.com:5141
+& stop
+# NOTE: The & ~ means not to put what matched in the above line anywhere else for the rest of the rules.

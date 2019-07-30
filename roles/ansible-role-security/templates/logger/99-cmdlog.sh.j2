@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Notes:
+#   fc command: print the most recent history command to stdout
+#   sed command: fc prints a tab and a space before commands
+#   logger command: dump the last command to syslog
+#
+# This has the minor downside that hitting enter on a prompt will repeat the last command in the log.
+# This is probably less awful than having .bash_history no longer update (since the 'history -a'
+# variation doesn't update .bash_history anymore)
+#
+# This is also, obviously, supremely fragile - but it's not intended to log malicious activity,
+# just provide a record of normal activity.
+
+export PROMPT_COMMAND='fc -ln -0 | sed "s/^[[:blank:]]*//" | logger -t "cmdlog[$USER:$PWD] $SSH_CLIENT"'

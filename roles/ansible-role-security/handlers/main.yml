@@ -1,0 +1,45 @@
+---
+# handlers file for ansible-role-security
+
+- name: reload sysctl settings
+  command: sysctl -p /etc/sysctl.d/10-network-security.conf
+
+- name: update ca-certificates
+  command: /usr/sbin/update-ca-certificates
+
+- name: restart auditd
+  service:
+    name: auditd
+    state: restarted
+    enabled: true
+  when: ansible_virtualization_type != "docker"  # doesn't work on docker. auditd has no support for containers
+
+- name: restart sysstat
+  service:
+    name: sysstat
+    state: restarted
+    enabled: true
+
+- name: restart and enable postfix
+  service:
+    name: postfix
+    state: restarted
+    enabled: true
+
+- name: reload postfix
+  command: /etc/init.d/postfix reload
+
+- name: restart rsyslog
+  service:
+    name: rsyslog
+    state: restarted
+    enabled: true
+
+- name: daemon-reload ufw
+  systemd:
+    name: ufw
+    state: restarted
+    daemon_reload: true
+
+- name: force enable ufw
+  command: ufw --force enable

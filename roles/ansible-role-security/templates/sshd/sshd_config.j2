@@ -1,0 +1,52 @@
+Port 22
+Protocol 2
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_dsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+UsePrivilegeSeparation yes
+
+KeyRegenerationInterval 3600
+ServerKeyBits 1024
+
+SyslogFacility AUTH
+LogLevel INFO
+
+LoginGraceTime 2m
+StrictModes yes
+
+RSAAuthentication yes
+PubkeyAuthentication yes
+
+IgnoreRhosts yes
+RhostsRSAAuthentication no
+HostbasedAuthentication no
+
+PermitEmptyPasswords no
+PermitUserEnvironment no
+PermitRootLogin no
+
+ChallengeResponseAuthentication no
+
+ClientAliveCountMax 0
+ClientAliveCountMax 0
+
+X11Forwarding no
+X11DisplayOffset 10
+PrintMotd yes
+PrintLastLog yes
+
+AllowAgentForwarding no
+AllowTcpForwarding no
+TCPKeepAlive yes
+
+Banner /etc/ssh/sshd-banner
+
+AcceptEnv LANG LC_*
+
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+UsePAM yes
+
+Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+MACs hmac-sha2-256,hmac-sha2-512

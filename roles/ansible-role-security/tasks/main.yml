@@ -1,0 +1,6 @@
+---
+# tasks file for ansible-role-security
+
+- import_tasks: ubuntu.yml
+  when: ansible_distribution == 'Ubuntu' and (ansible_distribution_version
+   == '16.04' or ansible_distribution_version == '18.04')

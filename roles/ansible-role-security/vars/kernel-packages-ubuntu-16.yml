@@ -1,0 +1,3 @@
+---
+# kernel_package_list for Ubuntu 16 - ansible-role-security
+kernel_package_list: linux-headers-4.4.0-138-generic,linux-image-4.4.0-138-generic,linux-image-extra-4.4.0-138-generic

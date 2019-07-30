@@ -1,0 +1,6 @@
+WARNING : Unauthorized access to this system is forbidden and will be
+prosecuted by law. By accessing this system, you agree that your actions
+may be monitored if unauthorized usage is suspected.
+Hostname:   {{ (facter_networking is defined and facter_networking['fqdn']) or ansible_fqdn }}
+Primary IP: {{ansible_default_ipv4.address|default(ansible_all_ipv4_addresses[0])}}
+

@@ -1,0 +1,40 @@
+---
+# defaults file for ansible-role-security
+
+# sshd_config:
+#   - { regexp: 'PrintMotd.*', line: 'PrintMotd yes' }
+#   - { regexp: 'Banner.*', line: 'Banner /etc/ssh/sshd-banner' }
+#   - { regexp: 'LogLevel.*', line: 'LogLevel INFO' }
+#   - { regexp: 'PrintLastLog.*', line: 'PrintLastLog yes' }
+#   - { regexp: 'LoginGraceTime.*', line: 'LoginGraceTime 2m' }
+#   - { regexp: 'RhostsAuthentication.*', line: 'RhostsAuthentication no' }
+#   - { regexp: 'PermitEmptyPasswords.*', line: 'PermitEmptyPasswords no' }
+#   - { regexp: 'IgnoreRhosts.*', line: 'IgnoreRhosts yes' }
+#   - { regexp: 'Protocol .*', line: 'Protocol 2' }
+#   - { regexp: 'PermitUserEnvironment.*', line: 'PermitUserEnvironment no' }
+#   - { regexp: 'ClientAliveCountMax.*', line: 'ClientAliveCountMax 0' }
+#   - { regexp: 'HostbasedAuthentication.*', line: 'HostbasedAuthentication no' }
+#   - { regexp: 'PermitRootLogin.*', line: 'PermitRootLogin no' }
+#   - { regexp: 'StrictModes.*', line: 'StrictModes yes' }
+#   - { regexp: 'X11Forwarding.*', line: 'X11Forwarding no' }
+#   - { regexp: 'AllowTcpForwarding.*', line: 'AllowTcpForwarding no' }
+#   - { regexp: 'AllowAgentForwarding.*', line: 'AllowAgentForwarding no' }
+
+default_ufw_rules:
+  - { direction: 'incoming', policy: 'deny' }
+  - { direction: 'outgoing', policy: 'allow' }
+
+ufw_rules:
+  - { rule: 'allow', port: 'ssh' }
+  - { rule: 'allow', port: '22' }
+  - { rule: 'allow', port: '80' }
+  - { rule: 'allow', port: '443' }
+  - { rule: 'allow', port: '2225' }
+  - { rule: 'allow', port: '4001' }
+  - { rule: 'allow', port: '4002' }
+  - { rule: 'allow', port: '4172' }
+  - { rule: 'allow', port: '8009' }
+  - { rule: 'allow', port: '8080' }
+  - { rule: 'allow', port: '8443' }
+  - { rule: 'allow', port: '22443' }
+  - { rule: 'allow', port: 'sftp' }

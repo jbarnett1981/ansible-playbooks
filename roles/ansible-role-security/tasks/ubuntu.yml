@@ -1,0 +1,597 @@
+---
+# ubuntu.yml tasks file for ansible-role-security
+
+- name: create signatures and scripts directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0775
+  with_items:
+    - /data/signatures
+    - /usr/local/scripts
+
+- name: rc backup files glob
+  find:
+    paths: /etc/init.d/
+    patterns: rc.2019-01*
+  register: files_to_delete
+
+- name: delete rc backup files
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ files_to_delete.files }}"
+
+- name: register command logging var
+  lineinfile:
+    name: /etc/profile
+    line: "history -a"
+    state: present
+  register: command_output
+  changed_when: command_output is not changed
+  check_mode: true
+
+- name: remove PROMPT_COMMAND from /etc/profile
+  lineinfile:
+    name: /etc/profile
+    regexp: '^export PROMPT_COMMAND.*'
+    state: absent
+  when: command_output.changed
+
+- name: remove history -a from /etc/profile
+  lineinfile:
+    name: /etc/profile
+    regexp: '^history -a$'
+    state: absent
+  when: command_output.changed
+
+- name: check if logger script exists
+  stat:
+    path: /etc/profile.d/99-cmdlog.sh
+  register: logger
+
+- name: create new logger
+  template:
+    src: logger/99-cmdlog.sh.j2
+    dest: /etc/profile.d/99-cmdlog.sh
+    mode: 0555
+  when: not logger.stat.exists
+
+- name: set banners
+  block:
+    - name: set /etc/ssh/sshd-banner
+      template:
+        src: sshd/sshd-banner.j2
+        dest: /etc/ssh/sshd-banner
+        mode: 0444
+
+    - name: set /etc/banner
+      template:
+        src: banners/etc-banner.j2
+        dest: /etc/banner
+        mode: 0444
+
+    - name: set /etc/issue
+      template:
+        src: banners/etc-issue.j2
+        dest: /etc/issue
+        mode: 0444
+
+    - name: set /etc/motd
+      template:
+        src: banners/etc-banner.j2
+        dest: /etc/motd
+        mode: 0444
+  tags:
+    - banners
+
+- name: sysctl settings
+  template:
+    src: sysctl/10-network-security.conf.j2
+    dest: /etc/sysctl.d/10-network-security.conf
+  notify:
+    - reload sysctl settings
+
+- name: configure /etc/cron.deny
+  template:
+    src: misc_etc/cron.deny.j2
+    dest: /etc/cron.deny
+    mode: 0644
+
+- name: check for minlen in /etc/pam.d/common-password
+  command: grep -c "minlen=" /etc/pam.d/common-password
+  register: minlen
+  failed_when: minlen.rc == 2
+  changed_when: false
+
+- name: update password requirements 1
+  lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^password.*sha512$'
+    line: password [success=2 default=ignore] pam_unix.so obscure use_authtok try_first_pass sha512 minlen=10
+    backrefs: true
+  when: minlen.stdout == "0"
+
+- name: check for reject_username in /etc/pam.d/common-password
+  command: grep -c "reject_username=" /etc/pam.d/common-password
+  register: reject_username
+  failed_when: reject_username.rc == 2
+  changed_when: false
+
+- name: update password requirements 2
+  lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^password.*retry=3$'
+    line: password requisite pam_pwquality.so try_first_pass retry=3 minlen=10 difok=5 ucredit=-1 lcredit=-1 dcredit=-1  ocredit=-1 reject_username
+    backrefs: true
+  when: reject_username.stdout == "0"
+
+- name: check for pam_pwquality.so in /etc/pam.d/common-password
+  command: grep -c "^pam_pwquality.so" /etc/pam.d/common-password
+  register: pam_pwquality
+  failed_when: pam_pwquality.rc == 2
+  changed_when: false
+
+- name: update password requirements 3
+  lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^pam_pwquality.so.*reject_username$'
+    line: password requisite pam_pwquality.so try_first_pass retry=3 minlen=10 difok=5 ucredit=-1 lcredit=-1 dcredit=-1  ocredit=-1 reject_username
+    backrefs: true
+  when: pam_pwquality.stdout == "0"
+
+- name: configure /etc/security/limits.conf
+  template:
+    src: security/limits.conf.j2
+    dest: /etc/security/limits.conf
+
+- name: configure /etc/security/pwquality.conf
+  template:
+    src: security/pwquality.conf.j2
+    dest: /etc/security/pwquality.conf
+    mode: 0644
+
+- name: configure /etc/profile.d/env.sh
+  template:
+    src: misc_etc/env.sh.j2
+    dest: /etc/profile.d/env.sh
+    mode: 0644
+
+- name: update /etc/ssh/sshd_config
+  template:
+    src: sshd/sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    mode: 0644
+
+- name: update /etc/login.defs
+  template:
+    src: misc_etc/login.defs.j2
+    dest: /etc/login.defs
+    mode: 0644
+
+- name: umask check
+  block:
+    - name: check for invalid umask in /etc/init.d/rc
+      command: grep -c "^umask 077" /etc/init.d/rc
+      register: umask_check
+      failed_when: umask_check.rc == 2
+      changed_when: false
+
+    - name: update umask in /etc/init.d/rc
+      lineinfile:
+        path: /etc/init.d/rc
+        regexp: '^umask 077'
+        line: umask 022
+        backrefs: true
+      when: umask_check.stdout == "1"
+  when: ansible_distribution_version == "16.04"
+
+- name: copy certs
+  copy:
+    src: "files/certs/{{ item }}"
+    dest: "/usr/local/share/ca-certificates/{{ item }}"
+    mode: 0444
+  with_items:
+    - NetApp_Root_0_CA.crt
+    - NetApp_Root_1_CA.crt
+    - NetApp_FMC_CA.crt
+  notify: update ca-certificates
+
+# https://askubuntu.com/questions/916199/install-apt-show-versions-inside-an-ubuntu-docker-container
+# https://github.com/ansible/molecule/pull/1663
+- name: make apt-show-versions changed (docker-only)
+  block:
+    - name: "remove docker-gzip-indexes"
+      file:
+        state: absent
+        path: /etc/apt/apt.conf.d/docker-gzip-indexes
+        force: true
+    - name: "purge apt-show-versions"
+      apt:
+        name: apt-show-versions
+        state: absent
+        purge: true
+        force: true
+    - name: "get apt index files"
+      find:
+        paths: /var/lib/apt/lists/
+        patterns: '*lz4'
+      register: apt_delete
+
+    - name: delete apt index files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ apt_delete.files }}"
+
+    - name: "apt update noindex"
+      apt:
+        update_cache: true
+        dpkg_options: 'Acquire::GzipIndexes=false'
+  when: ansible_virtualization_type == "docker"
+  tags:
+    - packages
+    - molecule-idempotence-notest
+
+- name: install required update packages
+  apt:
+    name: ['aptitude', 'apt-utils', 'python3']
+    state: present
+  environment:
+    DEBIAN_FRONTEND: 'noninteractive'
+  tags:
+    - packages
+
+- name: Read package vars
+  include_vars: '{{ item }}'
+  with_first_found:
+    - files:
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}-packages.yml"
+        - "{{ ansible_distribution | lower }}-packages.yml"
+        - "{{ ansible_os_family | lower }}-packages.yml"
+        - "default-packages.yml"
+  tags:
+    - packages
+
+# https://github.com/ansible/molecule/pull/1663
+- name: Install Core server management packages
+  apt:
+    name: "{{ package_list }}"
+    state: latest
+  environment:
+    DEBIAN_FRONTEND: 'noninteractive'
+  tags:
+    - packages
+    - molecule-idempotence-notest
+
+- name: read kernel package vars
+  include_vars: '{{ item }}'
+  with_first_found:
+    - files:
+        - "kernel-packages-{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+  tags:
+    - packages
+
+- name: install kernel packages
+  apt:
+    name: "{{ kernel_package_list }}"
+    state: present
+
+- name: Remove dependencies that are no longer required
+  apt:
+    autoremove: true
+  tags:
+    - packages
+    - molecule-idempotence-notest
+
+- name: Remove desktop packages
+  apt:
+    name: "{{ desktop_packages }}"
+    state: absent
+    purge: true
+  tags:
+    - packages
+    - molecule-idempotence-notest
+
+- name: Remove insecure packages
+  apt:
+    name: "{{ insecure_packages }}"
+    state: absent
+    purge: true
+  tags:
+    - packages
+    - molecule-idempotence-notest
+
+# nm_check var used in 30-stig.rules.j2 template
+- name: check if network manager is installed
+  dpkg_selections:
+    name: network-manager
+    selection: hold
+  register: nm_check
+  changed_when: false
+  tags:
+    - networkmanager
+
+- name: auditd rules
+  block:
+    - name: Installing audit rules /etc/audit/rules.d/10-base-config.rules
+      template:
+        src: auditd/10-base-config.rules.j2
+        dest: /etc/audit/rules.d/10-base-config.rules
+
+    - name: Installing audit rules /etc/audit/rules.d/30-stig.rules
+      template:
+        src: auditd/30-stig.rules.j2
+        dest: /etc/audit/rules.d/30-stig.rules
+
+    - name: Installing audit rules /etc/audit/rules.d/50-cls-baseline.rules
+      template:
+        src: auditd/50-cls-baseline.rules.j2
+        dest: /etc/audit/rules.d/50-cls-baseline.rules
+  tags:
+    - networkmanager
+
+- name: auditd rules
+  block:
+    - name: set auditd environment variables
+      lineinfile:
+        path: /etc/environment
+        regexp: '^export ANSIBLE_AUDITD_STATUS='
+        line: 'export ANSIBLE_AUDITD_STATUS=1'
+        state: present
+      register: auditd_status
+      when: '"ANSIBLE_AUDITD_STATUS" not in ansible_env'
+
+    - name: check is augenrules is present
+      stat:
+        path: /sbin/augenrules
+      register: augenrules_file
+      changed_when: false
+
+    - name: check for existence of audit.rules
+      stat:
+        path: /etc/audit/rules.d/audit-rules
+      register: audit_rules_file
+
+    - name: move audit.rules if it exists
+      command: mv /etc/audit/rules.d/audit-rules /etc/audit/rules.d/10-audit.rules
+      when: audit_rules_file.stat.exists
+
+    # # https://stackoverflow.com/questions/53311314/error-running-auditd-inside-centos-docker-container-unable-to-set-initial-audi
+    # - name: disable local_events aggregation (docker only)
+    #   lineinfile:
+    #     path: /etc/audit/auditd.conf
+    #     regexp: '^local_events'
+    #     line: 'local_events = no'
+    #     state: present
+    #   when: ansible_virtualization_type == "docker"
+
+    - name: load and check auditd rules
+      command: "{{ item }}"
+      with_items:
+        - /sbin/augenrules --load
+        - /sbin/augenrules --check
+      register: augenrules_lc
+      notify: restart auditd
+      when: augenrules_file.stat.exists and auditd_status.changed
+      failed_when: augenrules_lc.rc == 2
+
+    - name: set environment variables
+      lineinfile:
+        path: /etc/environment
+        regexp: '^export ANSIBLE_AUDITD_STATUS='
+        line: 'export ANSIBLE_AUDITD_STATUS=0'
+        state: present
+  tags:
+    - auditd
+
+- name: configure aide
+  block:
+
+    - name: check for /var/lib/aide/aide.conf.autogenerated
+      stat:
+        path: /var/lib/aide/aide.conf.autogenerated
+      register: aide_conf_auto
+
+    - name: check diff
+      command: diff /var/lib/aide/aide.conf.autogenerated /etc/aide/aide.conf
+      failed_when: diff.rc > 1
+      changed_when: false
+      register: diff
+      when:
+        - aide_conf_auto.stat.exists
+
+    - name: update aide.conf
+      template:
+        src: aide/aide.conf.j2
+        dest: /etc/aide/aide.conf
+      when:
+        - not aide_conf_auto.stat.exists
+
+    - name: Check to see if aide database exists
+      stat:
+        path: /var/lib/aide/aide.db
+      register: aide_database
+
+    - name: initialize aide (this could take a few minutes)
+      shell: "if test -x /usr/sbin/aideinit; then aideinit -y -f; else aide -i; fi"
+      changed_when: false
+      register: aide_init
+      when:
+        - not aide_database.stat.exists | bool
+
+    - name: copy /var/lib/aide/aide.conf.autogenerated to /etc/aide/aide.conf
+      copy:
+        src: /var/lib/aide/aide.conf.autogenerated
+        dest: /etc/aide/aide.conf
+        remote_src: true
+      when:
+        - aide_init is not skipped
+
+    - name: run aide check (this could take a few minutes)
+      command: aide -c /etc/aide/aide.conf --check
+      failed_when: false
+      when:
+        - aide_init is not skipped
+  tags:
+    - aide
+
+- name: enable sysstat if disabled
+  lineinfile:
+    path: /etc/default/sysstat
+    regexp: '^ENABLED='
+    line: 'ENABLED="true"'
+    state: present
+  notify: restart sysstat
+  tags:
+    - sysstat
+
+- name: postfix config
+  block:
+    - name: check if postfix is installed
+      dpkg_selections:
+        name: postfix
+        selection: install
+      register: postfix_check
+      changed_when: false
+
+    - name: check compatibility_level
+      shell: "/usr/sbin/postconf | grep 'compatibility_level' | head -n 1 | awk '{print $3}'"
+      register: compat_level
+      changed_when: false
+      when: postfix_check.before == "install"
+
+    - name: update postfix compatibility level
+      command: /usr/sbin/postconf compatibility_level=2
+      when: compat_level.stdout != "2"
+
+    - name: update postfix relay host
+      lineinfile:
+        path: /etc/postfix/main.cf
+        regexp: 'relayhost =.*$'
+        line: relayhost = smtprelay.solidfire.net
+        state: present
+      notify:
+        - restart and enable postfix
+        - reload postfix
+  tags:
+    - postfix
+
+- name: update rsyslog config
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: 'rsyslog/00-modules.conf.j2', dest: '/etc/rsyslog.d/00-modules.conf' }
+    - { src: 'rsyslog/00-templates.conf.j2', dest: '/etc/rsyslog.d/00-templates.conf' }
+    - { src: 'rsyslog/98-remotelogging-for-key-files.conf.j2', dest: '/etc/rsyslog.d/98-remotelogging-for-key-files.conf' }
+    - { src: 'rsyslog/99-remotelogging.conf.j2', dest: '/etc/rsyslog.d/99-remotelogging.conf' }
+  notify: restart rsyslog
+  tags:
+    - rsyslog
+
+- name: configure ufw
+  block:
+    - name: modify ufw.service file
+      lineinfile:
+        path: /lib/systemd/system/ufw.service
+        regexp: '^Before=network.target$'
+        line: 'After=network.target'
+        state: present
+        backrefs: true
+      notify: daemon-reload ufw
+
+    - name: Configure ufw defaults
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      with_items: "{{ default_ufw_rules }}"
+
+    - name: Configure ufw rules
+      ufw:
+        rule: "{{ item.rule }}"
+        port: "{{ item.port }}"
+      with_items: "{{ ufw_rules }}"
+      notify: force enable ufw
+  tags:
+    - ufw
+
+- name: setup lynis profile
+  template:
+    src: lynis/default.prf.j2
+    dest: /etc/lynis/default.prf
+  tags:
+    - lynis
+
+- name: setup clamav profile
+  template:
+    src: clamav/freshclam.conf.j2
+    dest: /etc/clamav/freshclam.conf
+  tags:
+    - clamav
+
+- name: update blacklist.conf
+  lineinfile:
+    path: /etc/modprobe.d/blacklist.conf
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - 'install cramfs echo "cramfs is not allowed as per CLS" && /bin/true'
+    - 'install freevxfs echo "freevxfs is not allowed as per CLS" && /bin/true'
+    - 'install jffs2 echo "jffs2 is not allowed as per CLS" && /bin/true'
+    - 'install hfs echo "hfs is not allowed as per CLS" && /bin/true'
+    - 'install hfsplus echo "hfsplus is not allowed as per CLS" && /bin/true'
+    - 'install squashfs echo "squashfs is not allowed as per CLS" && /bin/true'
+    - 'install udf echo "udf is not allowed as per CLS" && /bin/true'
+    - 'install dccp echo "dccp is not allowed as per CLS" && /bin/true'
+    - 'install sctp echo "sctp is not allowed as per CLS" && /bin/true'
+  tags:
+    - blacklist
+
+- name: add cron scripts
+  block:
+    - name: ensure /usr/local/scripts exists
+      file:
+        path: /usr/local/scripts
+        state: directory
+
+    - name: upload scripts
+      copy:
+        src: "scripts/{{ item }}"
+        dest: "/usr/local/scripts/{{ item }}"
+        mode: '0500'
+      with_items:
+        - do_patches.sh
+        - system_checks.sh
+
+    - name: create cron job for do_patches
+      cron:
+        name: "do_patches"
+        minute: "10"
+        hour: "11"
+        job: "/usr/local/scripts/do_patches.sh  >/dev/null 2>&1"
+        user: root
+        cron_file: cls-checks
+
+    - name: create cron job for system_checks
+      cron:
+        name: "system_checks"
+        minute: "01"
+        hour: "12"
+        job: "/usr/local/scripts/system_checks.sh  >/dev/null 2>&1"
+        user: root
+        cron_file: cls-checks
+  tags:
+    - scripts
+
+
+# - name: get ip info
+#   command: /sbin/ip addr
+#   register: out
+#   changed_when: false
+
+# - debug: var=ansible_facts
+
+# - debug: var=out

@@ -1,0 +1,12 @@
+
+---------------------------------------------------------
+
+You are connecting to:
+
+Hostname:   {{ (facter_networking is defined and facter_networking['fqdn']) or ansible_fqdn }}
+Primary IP: {{ansible_default_ipv4.address|default(ansible_all_ipv4_addresses[0])}}
+
+All connections are monitored
+Disconnect IMMEDIATELY if you are not an authorized user!
+
+----------------------------------------------------------

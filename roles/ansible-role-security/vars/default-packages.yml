@@ -1,0 +1,6 @@
+---
+# default packages vars file for ansible-role-security
+# package_list: postfix,acct,aide,apparmor,apt-listchanges,apt-show-versions,arpwatch,auditd,auth-client-config,autofs,bind9utils,bsd-mailx,ca-certificates,clamav,csh,curl,debian-goodies,debsecan,debsums,iftop,isc-dhcp-client,lshw,lsof,lynis,libpwquality-common,mailutils,mlocate,mutt,openssh-server,openssh-sftp-server,ncdu,ncompress,needrestart,ntpdate,pwgen,python-pip,rkhunter,screen,snmp,sssd,strace,sudo,sysstat,vim,vim-tiny,vim-common,wget
+package_list: rsyslog,ufw,postfix,acct,aide,apparmor,apt-listchanges,apt-show-versions,arpwatch,auditd,auth-client-config,autofs,bind9utils,bsd-mailx,ca-certificates,clamav,csh,curl,debian-goodies,debsecan,debsums,iftop,isc-dhcp-client,lshw,lsof,lynis,libpwquality-common,mailutils,mlocate,mutt,openssh-server,openssh-sftp-server,ncdu,ncompress,needrestart,ntpdate,pwgen,python-pip,rkhunter,screen,snmp,sssd,strace,sudo,sysstat,vim,vim-tiny,vim-common,wget
+desktop_packages: unity,ubuntu-desktop,cups
+insecure_packages: ftpd,nis,telnetd,rsh-server,tftpd,fail2ban
